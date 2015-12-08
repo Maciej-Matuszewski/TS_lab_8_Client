@@ -17,7 +17,7 @@ public class Main{
             output.flush();
             input = new ObjectInputStream(client.getInputStream());
             
-            if(JOptionPane.showConfirmDialog(null, "Czy chcesz nawiazaÄ‡ poÅ‚Ä…czenie?", "", 0) == 0){
+            if(JOptionPane.showConfirmDialog(null, "Czy chcesz nawiazaæ po³¹czenie?", "", 0) == 0){
     			
             	JOptionPane.showMessageDialog(null, "DZWONIE...(INVITE)");
                 sendMessage("INVITE", output);
@@ -39,6 +39,11 @@ public class Main{
 							String sendMsg1 = JOptionPane.showInputDialog("Wiadomosc Klient 1:");
 							if(sendMsg1.equals("BYE"))bye = true;
 				            sendMessage(sendMsg1, output);
+							break;
+							
+						case "486 Busy Here":
+							sendMessage("BYE", output);
+							bye = true;
 							break;
 							
 						case "BYE":
@@ -74,7 +79,8 @@ public class Main{
 						case "INVITE":
 							sendMessage("100 Trying", output);
 							sendMessage("180 Ringing", output);
-							sendMessage("200 OK", output);
+							if(JOptionPane.showConfirmDialog(null, "Czy chcesz odebraæ po³¹czenie od "+(String)input.readObject()+"?", "", 0) == 0) sendMessage("200 OK", output);
+							else sendMessage("486 Busy Here", output);
 							break;
 							
 						case "ACK":

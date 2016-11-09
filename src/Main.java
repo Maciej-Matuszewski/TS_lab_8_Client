@@ -12,122 +12,107 @@ public class Main{
         ObjectInputStream input = null;
         
         try{
-            client = new Socket(JOptionPane.showInputDialog("Podaj adres serwera"), 9666);
+
+        	String fromAddress = JOptionPane.showInputDialog("Client: Podaj adres email nadawcy");
+        	
+        	String[] fromAddressSplited = fromAddress.split("@");
+        	
+        	if (fromAddressSplited.length != 2 ){
+        		JOptionPane.showMessageDialog(null, "Client: Nieprawidłowy adres email");
+        		this.run();
+        		return;
+        	}
+        	
+            client = new Socket(fromAddressSplited[1], 9666);
             output = new ObjectOutputStream(client.getOutputStream());
             output.flush();
             input = new ObjectInputStream(client.getInputStream());
+            String recivedMessage;
             
-            if(JOptionPane.showConfirmDialog(null, "Czy chcesz nawiaza� po��czenie?", "", 0) == 0){
-    			
-            	JOptionPane.showMessageDialog(null, "DZWONIE...(INVITE)");
-                sendMessage("INVITE", output);
-                
-                String message = "";
-                Boolean bye = false;
-                while(!bye){
-                	
-                	try {
-						message = (String)input.readObject();
-						System.out.println("< " + message);
-						switch (message) {
-						case "100 Trying":
-						case "180 Ringing":
-							break;
-							
-						case "200 OK":
-							sendMessage("ACK", output);
-							String sendMsg1 = JOptionPane.showInputDialog("Wiadomosc Klient 1:");
-							if(sendMsg1.equals("BYE"))bye = true;
-				            sendMessage(sendMsg1, output);
-							break;
-							
-						case "486 Busy Here":
-							sendMessage("BYE", output);
-							bye = true;
-							break;
-							
-						case "BYE":
-							JOptionPane.showMessageDialog(null,message);
-		    	 	        sendMessage("200 OK", output);
-		    	 	        bye = true;
-							break;
+            recivedMessage = (String)input.readObject();
+            if (!recivedMessage.substring(0, 3).equals("220")){
+        		JOptionPane.showMessageDialog(null, "Client: Coś poszło nie tak :(");
+        		this.run();
+        		return;
+            }
+            
+            this.sendMessage("helo serwer.email.com", output);
+            
+            ////////////////////////////////////////////////////////////
+            recivedMessage = (String)input.readObject();
+            if (!recivedMessage.substring(0, 3).equals("250")){
+        		JOptionPane.showMessageDialog(null, "Client: Coś poszło nie tak :(");
+        		this.run();
+        		return;
+            }
+            
+            this.sendMessage("mail from: <" + fromAddress + ">", output);
+            
+            ////////////////////////////////////////////////////////////
+            recivedMessage = (String)input.readObject();
+            if (!recivedMessage.substring(0, 3).equals("250")){
+        		JOptionPane.showMessageDialog(null, "Client: Coś poszło nie tak :(");
+        		this.run();
+        		return;
+            }
+        	String toAddress = JOptionPane.showInputDialog("Client: Podaj adres email odbiorcy");
+            
+            this.sendMessage("rcpt to: <" + toAddress + ">", output);
+            
+            ////////////////////////////////////////////////////////////
+            recivedMessage = (String)input.readObject();
+            if (!recivedMessage.substring(0, 3).equals("250")){
+        		JOptionPane.showMessageDialog(null, "Client: Coś poszło nie tak :(");
+        		this.run();
+        		return;
+            }
+            
+            this.sendMessage("data", output);
+            
+            ////////////////////////////////////////////////////////////
+            recivedMessage = (String)input.readObject();
+            if (!recivedMessage.substring(0, 3).equals("354")){
+        		JOptionPane.showMessageDialog(null, "Client: Coś poszło nie tak :(");
+        		this.run();
+        		return;
+            }
 
-						default:
-							JOptionPane.showMessageDialog(null, message);
-							String sendMsg = JOptionPane.showInputDialog("Wiadomosc Klient 1:");
-							if(sendMsg.equals("BYE"))bye = true;
-				            sendMessage(sendMsg, output);
-							
-							break;
-						}
-						
-					} catch (ClassNotFoundException e) {
-						e.printStackTrace();
-					}
-                }
-    		}else{
-    			String message = "";
-    			Boolean bye = false;
-				while(!bye){
-					
-					try {
-						message = (String)input.readObject();
-						System.out.println("< " + message);
-						
-						switch (message) {
-							
-						case "INVITE":
-							sendMessage("100 Trying", output);
-							sendMessage("180 Ringing", output);
-							if(JOptionPane.showConfirmDialog(null, "Czy chcesz odebra� po��czenie od "+(String)input.readObject()+"?", "", 0) == 0) sendMessage("200 OK", output);
-							else sendMessage("486 Busy Here", output);
-							break;
-							
-						case "ACK":
-							break;
-							
-						case "BYE":
-							JOptionPane.showMessageDialog(null,message);
-				 	        sendMessage("200 OK", output);
-							break;
-
-						default:
-							
-							JOptionPane.showMessageDialog(null, message);
-							String sendMsg = JOptionPane.showInputDialog("Wiadomosc Klient 2:");
-							if(sendMsg.equals("BYE"))bye = true;
-				            sendMessage(sendMsg, output);
-							
-							break;
-						}
-						
-					} catch (ClassNotFoundException e) {
-						e.printStackTrace();
-					}
-				}
-    		}
+        	String data = JOptionPane.showInputDialog("Client: Podaj treść wiadomości");
+            this.sendMessage(data, output);
+            
+            ////////////////////////////////////////////////////////////
+            recivedMessage = (String)input.readObject();
+            if (!recivedMessage.substring(0, 3).equals("250")){
+        		JOptionPane.showMessageDialog(null, "Client: Coś poszło nie tak :(");
+        		this.run();
+        		return;
+            }
+            
+            this.sendMessage("quit", output);
+            
+            
         }
         catch(UnknownHostException unknownHost){
             unknownHost.printStackTrace();
         }
         catch(IOException ioException){
             ioException.printStackTrace();
-        }
+        } catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
         finally{
         	try {
-				input.close();
-				output.close();
-				client.close();
+        		if (input != null) input.close();
+        		if (output != null) output.close();
+        		if (client != null) client.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
         	
         }
     }
     
-    void sendMessage(String message, ObjectOutputStream out)
-    {
+    void sendMessage(String message, ObjectOutputStream out){
         try{
         	System.out.println("> "+message);
             out.writeObject(message);
@@ -138,8 +123,7 @@ public class Main{
         }
     }
     
-    public static void main(String args[])
-    {
+    public static void main(String args[]){
         Main client = new Main();
         client.run();
     }
